@@ -4,7 +4,7 @@ class RunWatcher < Formula
   desc "TUI app for monitoring GitHub Actions runs"
   homepage "https://github.com/prokizzle/run-watcher"
   url "https://github.com/prokizzle/run-watcher/archive/refs/tags/v0.1.0.tar.gz"
-  sha256 "YOUR_SHA256_HERE"
+  sha256 "05b0683ed95ebf3b3bbbac81516a9338265fa8156c01beae2c32b98dedb5178e"
   license "MIT"
 
   depends_on "python@3.13"
