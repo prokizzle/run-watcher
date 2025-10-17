@@ -2,8 +2,8 @@ class RunWatcher < Formula
   include Language::Python::Virtualenv
 
   desc "TUI app for monitoring GitHub Actions runs"
-  homepage "https://github.com/YOUR_USERNAME/run-watcher"
-  url "https://github.com/YOUR_USERNAME/run-watcher/archive/refs/tags/v0.1.0.tar.gz"
+  homepage "https://github.com/prokizzle/run-watcher"
+  url "https://github.com/prokizzle/run-watcher/archive/refs/tags/v0.1.0.tar.gz"
   sha256 "YOUR_SHA256_HERE"
   license "MIT"
 

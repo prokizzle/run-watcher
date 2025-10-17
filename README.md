@@ -7,7 +7,7 @@ A Textual TUI application for monitoring GitHub Actions runs across multiple rep
 ### Via Homebrew (Recommended)
 
 ```bash
-brew tap YOUR_USERNAME/run-watcher
+brew tap prokizzle/run-watcher
 brew install run-watcher
 ```
 
