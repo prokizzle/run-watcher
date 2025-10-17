@@ -2,7 +2,16 @@
 
 A Textual TUI application for monitoring GitHub Actions runs across multiple repositories.
 
-## Setup
+## Installation
+
+### Via Homebrew (Recommended)
+
+```bash
+brew tap YOUR_USERNAME/run-watcher
+brew install run-watcher
+```
+
+### From Source
 
 1. Install [mise](https://mise.jdx.dev/) if you haven't already:
 ```bash
@@ -20,7 +29,9 @@ mise install
 pip install -e .
 ```
 
-4. Set up GitHub authentication (choose one):
+## Setup
+
+Set up GitHub authentication (choose one):
 
 **Option A: Using GitHub CLI (recommended)**
 ```bash
@@ -45,6 +56,16 @@ run-watcher
 
 - `q` - Quit
 - `/` - Search/add repository
-- `↑/↓` - Navigate repository list
-- `Enter` - View repository details
-- `r` - Refresh runs
+- `Ctrl+P` - Open command palette
+- `↑/↓` - Navigate lists
+- `Enter` - Select item
+- `r` - Refresh all repositories
+
+## Features
+
+- 🎨 **Beautiful TUI** - Inspired by [Posting](https://github.com/darrenburns/posting) with rounded borders and focus states
+- 📊 **Real-time Monitoring** - Watch workflow runs update every 30 seconds
+- 🔍 **Command Palette** - Quick access to all features with fuzzy search (Ctrl+P)
+- ❌ **Test Failure Display** - Click failed steps to see detailed logs
+- 💾 **Persistent Repositories** - Your watched repos are saved between sessions
+- ⌨️ **Keyboard-Centric** - Navigate everything without touching the mouse
