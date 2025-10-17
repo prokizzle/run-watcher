@@ -12,6 +12,9 @@ ENV/
 # mise
 .mise.local.toml
 
+# Claude Code
+.claude/settings.local.json
+
 # IDE
 .vscode/
 .idea/
@@ -21,6 +24,9 @@ ENV/
 # Environment
 .env
 .env.local
+
+# User data
+repos.json
 
 # Distribution
 dist/
