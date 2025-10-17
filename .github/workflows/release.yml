@@ -1,0 +1,78 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create ${{ steps.version.outputs.VERSION }} \
+            --title "${{ steps.version.outputs.VERSION }} - Release" \
+            --notes "## Release ${{ steps.version.outputs.VERSION }}
+
+          🎉 New release of Run Watcher - a beautiful TUI for monitoring GitHub Actions runs!
+
+          ### Installation
+
+          Via Homebrew:
+          \`\`\`bash
+          brew tap prokizzle/run-watcher
+          brew install run-watcher
+          \`\`\`
+
+          From source:
+          \`\`\`bash
+          pip install git+https://github.com/prokizzle/run-watcher.git@${{ steps.version.outputs.VERSION }}
+          \`\`\`
+
+          ### Requirements
+
+          - Python 3.13+
+          - GitHub authentication (via \`gh auth login\` or personal access token)
+
+          See the [README](https://github.com/prokizzle/run-watcher#readme) for full setup instructions."
+
+      - name: Calculate SHA256 of release tarball
+        id: sha256
+        run: |
+          sleep 5  # Give GitHub a moment to generate the tarball
+          SHA256=$(curl -sL https://github.com/${{ github.repository }}/archive/refs/tags/${{ steps.version.outputs.VERSION }}.tar.gz | sha256sum | awk '{print $1}')
+          echo "SHA256=$SHA256" >> $GITHUB_OUTPUT
+          echo "Calculated SHA256: $SHA256"
+
+      - name: Update Homebrew formula
+        run: |
+          sed -i "s|url \".*\"|url \"https://github.com/${{ github.repository }}/archive/refs/tags/${{ steps.version.outputs.VERSION }}.tar.gz\"|" Formula/run-watcher.rb
+          sed -i "s|sha256 \".*\"|sha256 \"${{ steps.sha256.outputs.SHA256 }}\"|" Formula/run-watcher.rb
+
+      - name: Commit updated formula
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/run-watcher.rb
+          git commit -m "Update Homebrew formula for ${{ steps.version.outputs.VERSION }}
+
+          - Update URL to ${{ steps.version.outputs.VERSION }} release tarball
+          - Update SHA256 to ${{ steps.sha256.outputs.SHA256 }}
+
+          🤖 Automated by GitHub Actions"
+          git push origin HEAD:main
