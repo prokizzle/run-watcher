@@ -6,7 +6,7 @@ from textual.widgets import Static, ListItem, ListView, Label
 from textual.reactive import reactive
 from rich.text import Text
 from typing import List, Optional
-from .github_client import RunInfo
+from .github_client import RunInfo, JobFailure
 
 
 class AppHeader(Horizontal):
@@ -127,6 +127,44 @@ class RunsList(ListView):
             self.mount(EmptyState("No runs found"))
 
 
+class FailedStepItem(Static):
+    """A clickable item for a failed workflow step."""
+
+    def __init__(self, failure: JobFailure, run_id: int, repo_name: str):
+        # Create the text content
+        text = Text()
+        conclusion_style = "red" if failure.conclusion == "failure" else "yellow"
+        text.append("  ✗ ", style=conclusion_style)
+        text.append(f"{failure.step_name}", style=conclusion_style)
+        text.append(f" ({failure.conclusion})", style="dim")
+
+        super().__init__(text)
+        self.failure = failure
+        self.run_id = run_id
+        self.repo_name = repo_name
+        self.add_class("failed-step-item")
+
+    def on_click(self) -> None:
+        """Handle click events on this step."""
+        # Post a message that the app can handle
+        from textual.message import Message
+
+        class FailedStepClicked(Message):
+            def __init__(self, item: "FailedStepItem"):
+                super().__init__()
+                self.item = item
+
+        self.post_message(FailedStepClicked(self))
+
+
+class FailedStepsList(ListView):
+    """Widget displaying a list of failed steps."""
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.failures: List[JobFailure] = []
+
+
 class DetailView(VerticalScroll):
     """Widget displaying details of the selected run."""
 
@@ -134,8 +172,14 @@ class DetailView(VerticalScroll):
         super().__init__(**kwargs)
         self.current_run: Optional[RunInfo] = None
 
-    def show_run_details(self, run: RunInfo) -> None:
-        """Display details for a specific run."""
+    def show_run_details(self, run: RunInfo, failures: Optional[List[JobFailure]] = None, repo_name: Optional[str] = None) -> None:
+        """Display details for a specific run.
+
+        Args:
+            run: The workflow run information
+            failures: Optional list of job failures to display
+            repo_name: Repository name for fetching logs
+        """
         self.current_run = run
         self.remove_children()
 
@@ -165,6 +209,30 @@ class DetailView(VerticalScroll):
         header.append(f"\nURL: {run.html_url}\n", style="blue underline")
 
         self.mount(Static(header))
+
+        # Show failures if available
+        if failures and repo_name:
+            separator = Text()
+            separator.append(f"\n{'─' * 40}\n", style="dim")
+            separator.append(f"Failed Steps ({len(failures)}):\n", style="bold red")
+            separator.append("Click a step to view logs\n\n", style="dim italic")
+            self.mount(Static(separator))
+
+            # Group failures by job
+            jobs_dict = {}
+            for failure in failures:
+                if failure.job_name not in jobs_dict:
+                    jobs_dict[failure.job_name] = []
+                jobs_dict[failure.job_name].append(failure)
+
+            for job_name, job_failures in jobs_dict.items():
+                job_header = Text()
+                job_header.append(f"▸ {job_name}\n", style="bold yellow")
+                self.mount(Static(job_header))
+
+                # Create a list of failed steps for this job
+                for failure in job_failures:
+                    self.mount(FailedStepItem(failure, run.id, repo_name))
 
     def show_logs(self, logs: str) -> None:
         """Display logs for a specific run."""

@@ -12,7 +12,7 @@ from textual import work
 from dotenv import load_dotenv
 
 from .github_client import GitHubClient
-from .widgets import AppHeader, RepoList, RunsList, DetailView, EmptyState
+from .widgets import AppHeader, RepoList, RunsList, DetailView, EmptyState, FailedStepItem
 from .poller import RunPoller
 from .config import Config
 from .commands import RunWatcherCommands
@@ -194,6 +194,18 @@ class RunWatcherApp(App):
     RunListItem:hover {
         background: $panel-lighten-1;
         border: solid $primary 60%;
+    }
+
+    .failed-step-item {
+        height: 1;
+        width: 100%;
+        padding: 0 1;
+        margin: 0;
+        background: transparent;
+    }
+
+    .failed-step-item:hover {
+        background: $panel-lighten-1;
     }
 
     #search-dialog {
@@ -465,8 +477,64 @@ class RunWatcherApp(App):
 
         elif isinstance(event.item, RunListItem):
             # Run selected - show details in right column
-            detail_view = self.query_one("#detail-view", DetailView)
-            detail_view.show_run_details(event.item.run)
+            self.show_run_details(event.item.run)
+
+    def on_failed_step_item_failed_step_clicked(self, message) -> None:
+        """Handle failed step click events."""
+        self.show_step_logs(message.item)
+
+    @work(exclusive=True)
+    async def show_run_details(self, run) -> None:
+        """Show details for a selected run, fetching failures if needed."""
+        detail_view = self.query_one("#detail-view", DetailView)
+
+        # Show basic details immediately
+        detail_view.show_run_details(run, repo_name=self.current_repo)
+
+        # Fetch failures if the run failed
+        if run.is_failure and self.current_repo:
+            failures = await self.run_in_executor(
+                self.github_client.get_run_failures,
+                self.current_repo,
+                run.id
+            )
+
+            # Update with failures
+            if failures:
+                detail_view.show_run_details(run, failures, self.current_repo)
+
+    @work(exclusive=True)
+    async def show_step_logs(self, failed_step_item: FailedStepItem) -> None:
+        """Show logs for a selected failed step."""
+        detail_view = self.query_one("#detail-view", DetailView)
+
+        # Show loading message
+        detail_view.remove_children()
+        from rich.text import Text
+        from textual.widgets import Static
+        loading = Text()
+        loading.append("Loading logs for ", style="dim")
+        loading.append(f"{failed_step_item.failure.step_name}", style="bold")
+        loading.append("...", style="dim")
+        detail_view.mount(Static(loading))
+
+        # Fetch logs
+        logs = await self.run_in_executor(
+            self.github_client.get_job_logs,
+            failed_step_item.repo_name,
+            failed_step_item.run_id,
+            failed_step_item.failure.job_name
+        )
+
+        # Display logs
+        if logs:
+            detail_view.show_logs(logs)
+        else:
+            error = Text()
+            error.append("Failed to load logs for ", style="red")
+            error.append(f"{failed_step_item.failure.step_name}", style="bold red")
+            detail_view.remove_children()
+            detail_view.mount(Static(error))
 
 
 def main():
